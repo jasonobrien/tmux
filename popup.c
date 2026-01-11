@@ -150,6 +150,9 @@ popup_mode_cb(__unused struct client *c, void *data, u_int *cx, u_int *cy)
 {
 	struct popup_data	*pd = data;
 
+	if (pd->flags & POPUP_NOFOCUS)
+		return (NULL);
+
 	if (pd->md != NULL)
 		return (menu_mode_cb(c, pd->md, cx, cy));
 
@@ -491,6 +494,9 @@ popup_key_cb(struct client *c, void *data, struct key_event *event)
 	size_t			 len;
 	u_int			 px, py, x;
 	enum { NONE, LEFT, RIGHT, TOP, BOTTOM } border = NONE;
+
+	if (pd->flags & POPUP_NOFOCUS)
+		return (2);
 
 	if (pd->md != NULL) {
 		if (menu_key_cb(c, pd->md, event) == 1) {
