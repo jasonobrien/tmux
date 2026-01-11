@@ -2659,9 +2659,13 @@ server_client_handle_key(struct client *c, struct key_event *event)
 			case 1:
 				server_client_clear_overlay(c);
 				return (0);
+			case 2:
+				goto skip_clear;
 			}
 		}
 		server_client_clear_overlay(c);
+
+	skip_clear:
 		if (c->prompt_string != NULL) {
 			if (status_prompt_key(c, event->key) == 0)
 				return (0);
@@ -2929,7 +2933,7 @@ server_client_reset_state(struct client *c)
 	struct window_pane	*wp = server_client_get_pane(c), *loop;
 	struct screen		*s = NULL;
 	struct options		*oo = c->session->options;
-	int			 mode = 0, cursor, flags;
+	int			 mode = 0, cursor, flags, overlay_focused = 0;
 	u_int			 cx = 0, cy = 0, ox, oy, sx, sy, n;
 
 	if (c->flags & (CLIENT_CONTROL|CLIENT_SUSPENDED))
@@ -2941,12 +2945,18 @@ server_client_reset_state(struct client *c)
 
 	/* Get mode from overlay if any, else from screen. */
 	if (c->overlay_draw != NULL) {
-		if (c->overlay_mode != NULL)
+		overlay_focused = 1;
+		if (c->overlay_mode != NULL) {
 			s = c->overlay_mode(c, c->overlay_data, &cx, &cy);
-	} else if (c->prompt_string == NULL)
-		s = wp->screen;
-	else
-		s = c->status.active;
+			overlay_focused = (s != NULL);
+		}
+	}
+	if (!overlay_focused) {
+		if (c->prompt_string == NULL)
+			s = wp->screen;
+		else
+			s = c->status.active;
+	}
 	if (s != NULL)
 		mode = s->mode;
 	if (log_get_level() != 0) {
@@ -2971,7 +2981,7 @@ server_client_reset_state(struct client *c)
 				cy = tty->sy - 1;
 		}
 		cx = c->prompt_cursor;
-	} else if (c->overlay_draw == NULL) {
+	} else if (!overlay_focused) {
 		cursor = 0;
 		tty_window_offset(tty, &ox, &oy, &sx, &sy);
 		if (wp->xoff + s->cx >= ox && wp->xoff + s->cx <= ox + sx &&
@@ -2996,7 +3006,7 @@ server_client_reset_state(struct client *c)
 	 * movement events.
 	 */
 	if (options_get_number(oo, "mouse")) {
-		if (c->overlay_draw == NULL) {
+		if (!overlay_focused) {
 			mode &= ~ALL_MOUSE_MODES;
 			TAILQ_FOREACH(loop, &w->panes, entry) {
 				if (loop->screen->mode & MODE_MOUSE_ALL)
@@ -3010,7 +3020,7 @@ server_client_reset_state(struct client *c)
 	}
 
 	/* Clear bracketed paste mode if at the prompt. */
-	if (c->overlay_draw == NULL && c->prompt_string != NULL)
+	if (!overlay_focused && c->prompt_string != NULL)
 		mode &= ~MODE_BRACKETPASTE;
 
 	/* Set the terminal mode and reset attributes. */
