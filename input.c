@@ -2557,9 +2557,10 @@ input_dcs_dispatch(struct input_ctx *ictx)
 	int			 p2;
 #endif
 
-	if (wp == NULL)
-		return (0);
-	oo = wp->options;
+	if (wp != NULL)
+		oo = wp->options;
+	else
+		oo = global_options;
 
 	if (ictx->flags & INPUT_DISCARD) {
 		log_debug("%s: %zu bytes (discard)", __func__, len);
