@@ -2557,9 +2557,10 @@ input_dcs_dispatch(struct input_ctx *ictx)
 	int			 p2;
 #endif
 
-	if (wp == NULL)
-		return (0);
-	oo = wp->options;
+	if (wp != NULL)
+		oo = wp->options;
+	else
+		oo = global_w_options;
 
 	if (ictx->flags & INPUT_DISCARD) {
 		log_debug("%s: %zu bytes (discard)", __func__, len);
@@ -2567,8 +2568,8 @@ input_dcs_dispatch(struct input_ctx *ictx)
 	}
 
 #ifdef ENABLE_SIXEL
-	w = wp->window;
-	if (buf[0] == 'q' && ictx->interm_len == 0) {
+	if (wp != NULL && buf[0] == 'q' && ictx->interm_len == 0) {
+		w = wp->window;
 		if (input_split(ictx) != 0)
 			return (0);
 		p2 = input_get(ictx, 1, 0, 0);
